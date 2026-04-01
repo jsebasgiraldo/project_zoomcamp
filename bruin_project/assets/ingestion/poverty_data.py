@@ -89,6 +89,7 @@ columns:
 
 @bruin """
 
+#Import libraries
 import os
 import tzdata
 os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
@@ -101,15 +102,17 @@ import requests
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-
+#Link to the data, we will append the year and extension to it
 url='https://www2.census.gov/programs-surveys/supplemental-poverty-measure/datasets/spm/spm_'
 
+#Iteration throght the dates provides
 def _iter_year_starts(start_date, end_date):
     cur = start_date.replace(day=1)
     last = end_date.replace(day=1)
     while cur <= last:
         yield cur
         cur = (cur + relativedelta(years=1)).replace(day=1)
+
 
 def materialize():
     start_date_s = os.environ.get("BRUIN_START_DATE")
@@ -118,26 +121,26 @@ def materialize():
     if not start_date_s or not end_date_s:
         raise RuntimeError("BRUIN_START_DATE and BRUIN_END_DATE must be provided")
 
-    # Convertimos a objeto date
     start_date = datetime.strptime(start_date_s, "%Y-%m-%d").date()
     end_date = datetime.strptime(end_date_s, "%Y-%m-%d").date()
 
-
-    MIN_YEAR = 2021
+    #Only there's data from 2009 to 2023, except 2020. So we restricted the dates 
+    MIN_YEAR = 2009
     MAX_YEAR = 2023
     
-    # Si la fecha de inicio es menor a 2021, la subimos a 2021
+    #When the dates provide is less the minimun year, it takes the minimun year
     if start_date.year < MIN_YEAR:
         start_date = datetime(MIN_YEAR, 1, 1).date()
         
-    # Si la fecha de fin es mayor a 2023, la bajamos a 2023
+    #When the dates provide is over the maximun year, it takes the maximun year
     if end_date.year > MAX_YEAR:
         end_date = datetime(MAX_YEAR, 12, 31).date()
     
-    # Validación extra: si después de ajustar, el inicio es mayor al fin, no hay nada que hacer
     if start_date > end_date:
-        print(f"[ingestion.data] Rango fuera de límites (2021-2023). Nada que descargar.")
+        print(f"[ingestion.data] Out of bounds range (2009-2023). Nothing to download.")
         return pd.DataFrame()
+
+    #Creating the final_url and the dataframes union
     dfs = []
     ext='dta'
     for year_start in _iter_year_starts(start_date, end_date):
@@ -151,11 +154,12 @@ def materialize():
                 continue
 
             df = pd.read_stata(io.BytesIO(resp.content))
-            # Forzar todas las columnas datetime a naive puro (sin tz metadata)
+            
             for col in df.columns:
                 if pd.api.types.is_datetime64_any_dtype(df[col]):
                     df[col] = pd.to_datetime(df[col], errors="coerce").dt.tz_localize(None)
-
+            
+            #Loading like string the data variables, because I had a problem with tzdata library 
             df["extracted_at"] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             dfs.append(df)
             print(f"[ingestion.poverty_data] fetched, rows={len(df)}")
@@ -166,6 +170,7 @@ def materialize():
     if not dfs:
         return pd.DataFrame()
     
+    #Taking only the interest variables
     result = pd.concat(dfs, ignore_index=True)
     result['FILEDATE'] = pd.to_datetime(result['FILEDATE'], errors='coerce').dt.strftime('%Y-%m-%d')
     result=result[['FILEDATE', 'serialno', 'sporder', 'st', 'OFFPoor','Age','Mar', 'Sex',

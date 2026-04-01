@@ -19,6 +19,9 @@ custom_checks:
 
  @bruin */
 
+-- Casting all the columns to it's proper format
+-- Join with states table
+-- Transforming numeric codes following the database documentation
 
 select cast(poverty.FILEDATE as DATE) as FILEDATE,
 cast(poverty.serialno as STRING ) as serialno,

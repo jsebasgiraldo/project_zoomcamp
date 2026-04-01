@@ -17,6 +17,7 @@ custom_checks:
 
  @bruin */
 
+--Grouping the population and the poverty indicator by each demographic characteristic
  Select State_name,
  poverty_status,
  extract( year from FILEDATE) as year,

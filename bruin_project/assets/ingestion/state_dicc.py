@@ -25,7 +25,8 @@ columns:
 
 @bruin """
 
-
+# Creating the state table for later merging
+# IDs taking from database documentation 
 import pandas as pd
 
 def materialize():

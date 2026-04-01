@@ -17,6 +17,8 @@ custom_checks:
 
  @bruin */
 
+--Grouping variables for economic analysis of every family
+
  Select State_name,
  poverty_status,
  Cohabit,
