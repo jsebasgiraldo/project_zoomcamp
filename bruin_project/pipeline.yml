@@ -1,0 +1,8 @@
+name: poverty-measure
+
+schedule: monthly
+start_date: "2022-01-01"
+
+
+default_connections:
+  bigquery: "bigquery-default"
